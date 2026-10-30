@@ -5,10 +5,10 @@ spring:
     url: jdbc:mysql://localhost:3306/nang_fashion_db
     username: root
     password: 123456
-    jpa:
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    properties:
       hibernate:
-        ddl-auto: update
-      show-sql: true
-      properties:
-        hibernate:
-          format_sql: true
+        format_sql: true
