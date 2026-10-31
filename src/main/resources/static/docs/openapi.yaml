@@ -1,0 +1,1126 @@
+openapi: 3.0.3
+info:
+  title: Hệ Thống Quản Lý Chuỗi Cửa Hàng Thời Trang "Nắng Fashion" - REST API
+  description: |
+    Tài liệu thiết kế toàn diện hệ thống RESTful API cho chuỗi cửa hàng thời trang Nắng Fashion (3 chi nhánh TP.HCM: Q1, Q3, Thủ Đức, bán hàng đa kênh POS, Shopee, TikTok Shop, Facebook).
+    
+    Chuẩn phản hồi chung (Common Response Wrapper):
+    ```json
+    {
+      "code": 1000,
+      "message": "Thành công",
+      "result": { ... },
+      "timestamp": "2026-10-31T08:00:00"
+    }
+    ```
+  version: 1.0.0
+  contact:
+    name: Đội ngũ phát triển Backend Nắng Fashion
+servers:
+  - url: http://localhost:8080/api/v1
+    description: Máy chủ thử nghiệm cục bộ (Local Development)
+
+tags:
+  - name: 01. Authentication & Users
+    description: Đăng nhập, cấp JWT, quản lý tài khoản nhân viên & hoa hồng doanh số
+  - name: 02. Stores
+    description: Quản lý chi nhánh (Quận 1, Quận 3, Thủ Đức)
+  - name: 03. Categories & Brands
+    description: Danh mục phân cấp cha-con & Thương hiệu
+  - name: 04. Products & Variants
+    description: Quản lý sản phẩm, biến thể (Size/Màu), quét Barcode POS < 2s, nhập Excel
+  - name: 05. Inventory & Warehouse
+    description: Tồn kho đa chi nhánh, cảnh báo hết hàng, luân chuyển kho & kiểm kê
+  - name: 06. POS & Orders
+    description: Bán hàng tại quầy, thanh toán kết hợp (Tiền mặt/Thẻ/CK), in hóa đơn K80
+  - name: 07. Work Shifts
+    description: Quản lý ca trực thu ngân, đối soát tiền mặt chống thất thoát cuối ca
+  - name: 08. CRM & Customers
+    description: Quản lý khách hàng, tra cứu SĐT, tích điểm & nâng hạng thành viên
+  - name: 09. Promotions & Vouchers
+    description: Chương trình khuyến mãi, voucher giới hạn lượt dùng & chi nhánh
+  - name: 10. Returns
+    description: Xử lý đổi trả hàng trong vòng 7 ngày
+  - name: 11. Reports & Analytics
+    description: Báo cáo doanh thu, lãi gộp, tồn kho, sản phẩm bán chạy, xuất Excel/PDF
+  - name: 12. Integrations
+    description: Đồng bộ đơn hàng sàn Shopee, TikTok Shop và vận chuyển GHN/GHTK
+
+paths:
+  # =========================================================================
+  # 01. AUTHENTICATION & USERS
+  # =========================================================================
+  /auth/login:
+    post:
+      tags: [01. Authentication & Users]
+      summary: Đăng nhập hệ thống (Lấy JWT Token)
+      operationId: login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [username, password]
+              properties:
+                username:
+                  type: string
+                  example: "binh.le"
+                password:
+                  type: string
+                  example: "123456"
+      responses:
+        '200':
+          description: Đăng nhập thành công, trả về Access Token & thông tin tài khoản
+        '401':
+          description: Sai tên đăng nhập hoặc mật khẩu
+
+  /auth/me:
+    get:
+      tags: [01. Authentication & Users]
+      summary: Lấy thông tin tài khoản đang đăng nhập
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Thông tin chi tiết user và quyền hạn
+
+  /users:
+    get:
+      tags: [01. Authentication & Users]
+      summary: Danh sách nhân viên (Phân quyền & lọc theo chi nhánh)
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: storeId
+          in: query
+          schema: { type: integer }
+          description: Lọc nhân viên theo chi nhánh
+        - name: role
+          in: query
+          schema: { type: string, enum: [ADMIN, STORE_MANAGER, CASHIER, ACCOUNTANT] }
+        - name: page
+          in: query
+          schema: { type: integer, default: 1 }
+        - name: size
+          in: query
+          schema: { type: integer, default: 10 }
+      responses:
+        '200':
+          description: Danh sách nhân viên phân trang
+
+    post:
+      tags: [01. Authentication & Users]
+      summary: Tạo tài khoản nhân viên mới (Chỉ Admin)
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserRequest'
+      responses:
+        '201':
+          description: Tạo tài khoản thành công
+
+  /users/{id}:
+    put:
+      tags: [01. Authentication & Users]
+      summary: Cập nhật thông tin nhân viên hoặc tỷ lệ hoa hồng
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserRequest'
+      responses:
+        '200':
+          description: Cập nhật thành công
+
+    delete:
+      tags: [01. Authentication & Users]
+      summary: Vô hiệu hóa tài khoản nhân viên (Khóa)
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: Đã khóa tài khoản thành công
+
+  # =========================================================================
+  # 02. STORES
+  # =========================================================================
+  /stores:
+    get:
+      tags: [02. Stores]
+      summary: Lấy danh sách toàn bộ chi nhánh (Q1, Q3, Thủ Đức)
+      responses:
+        '200':
+          description: Danh sách các cửa hàng kèm trạng thái hoạt động
+    post:
+      tags: [02. Stores]
+      summary: Thêm chi nhánh cửa hàng mới (Chỉ Admin)
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StoreRequest'
+      responses:
+        '201':
+          description: Tạo chi nhánh thành công
+
+  /stores/{id}:
+    put:
+      tags: [02. Stores]
+      summary: Cập nhật thông tin chi nhánh
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StoreRequest'
+      responses:
+        '200':
+          description: Cập nhật thành công
+
+  # =========================================================================
+  # 03. CATEGORIES & BRANDS
+  # =========================================================================
+  /categories:
+    get:
+      tags: [03. Categories & Brands]
+      summary: Lấy danh sách cây danh mục sản phẩm (Hỗ trợ cha - con đa cấp)
+      responses:
+        '200':
+          description: Danh mục phân tầng
+    post:
+      tags: [03. Categories & Brands]
+      summary: Tạo mới danh mục
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CategoryRequest'
+      responses:
+        '201':
+          description: Tạo danh mục thành công
+
+  /brands:
+    get:
+      tags: [03. Categories & Brands]
+      summary: Lấy danh sách thương hiệu thời trang
+      responses:
+        '200':
+          description: Danh sách thương hiệu
+    post:
+      tags: [03. Categories & Brands]
+      summary: Tạo thương hiệu mới
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BrandRequest'
+      responses:
+        '201':
+          description: Tạo thành công
+
+  # =========================================================================
+  # 04. PRODUCTS & VARIANTS
+  # =========================================================================
+  /products:
+    get:
+      tags: [04. Products & Variants]
+      summary: Danh sách sản phẩm phân trang (Tìm kiếm, lọc danh mục, mùa vụ)
+      parameters:
+        - name: search
+          in: query
+          schema: { type: string }
+          description: Tìm theo tên sản phẩm hoặc mã kiểu dáng
+        - name: categoryId
+          in: query
+          schema: { type: integer }
+        - name: season
+          in: query
+          schema: { type: string }
+          description: Lọc theo mùa (Xuân Hè, Thu Đông 2026...)
+        - name: isActive
+          in: query
+          schema: { type: boolean }
+        - name: page
+          in: query
+          schema: { type: integer, default: 1 }
+        - name: size
+          in: query
+          schema: { type: integer, default: 20 }
+      responses:
+        '200':
+          description: Danh sách sản phẩm và các biến thể chi tiết
+
+    post:
+      tags: [04. Products & Variants]
+      summary: Thêm mới sản phẩm cha kèm danh sách biến thể (Size/Màu/Barcode/Giá vốn/Giá bán)
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProductRequest'
+      responses:
+        '201':
+          description: Tạo sản phẩm và biến thể thành công
+
+  /products/{id}:
+    get:
+      tags: [04. Products & Variants]
+      summary: Chi tiết sản phẩm kèm danh sách biến thể
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: Thông tin chi tiết sản phẩm
+    put:
+      tags: [04. Products & Variants]
+      summary: Cập nhật thông tin sản phẩm và các biến thể
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProductRequest'
+      responses:
+        '200':
+          description: Cập nhật thành công
+
+  /products/{id}/status:
+    patch:
+      tags: [04. Products & Variants]
+      summary: Ẩn/Hiện sản phẩm theo mùa vụ bán buôn
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [isActive]
+              properties:
+                isActive: { type: boolean }
+      responses:
+        '200':
+          description: Cập nhật trạng thái hiển thị thành công
+
+  /products/import-excel:
+    post:
+      tags: [04. Products & Variants]
+      summary: Nhập hàng loạt sản phẩm và mã vạch từ file Excel
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: File Excel (.xlsx) danh sách sản phẩm
+      responses:
+        '200':
+          description: Nhập file thành công, trả về số lượng bản ghi đã tạo
+
+  /variants/barcode/{barcode}:
+    get:
+      tags: [04. Products & Variants]
+      summary: "TRA CỨU NHANH THEO BARCODE (< 2s phục vụ quẹt tại POS)"
+      description: Thu ngân dùng súng quét mã vạch tít vào áo, API trả về thông tin giá, size, màu ngay lập tức.
+      parameters:
+        - name: barcode
+          in: path
+          required: true
+          schema: { type: string }
+          example: "893850100101"
+      responses:
+        '200':
+          description: Trả về thông tin biến thể và tồn kho khả dụng
+        '404':
+          description: Mã vạch không tồn tại trong hệ thống
+
+  # =========================================================================
+  # 05. INVENTORY & WAREHOUSE
+  # =========================================================================
+  /inventories:
+    get:
+      tags: [05. Inventory & Warehouse]
+      summary: Xem tồn kho theo từng cửa hàng hoặc tổng toàn hệ thống
+      parameters:
+        - name: storeId
+          in: query
+          schema: { type: integer }
+          description: Bỏ trống nếu muốn xem tổng tồn kho toàn bộ 3 chi nhánh
+        - name: search
+          in: query
+          schema: { type: string }
+          description: Tìm theo tên sản phẩm, SKU hoặc Barcode
+        - name: page
+          in: query
+          schema: { type: integer, default: 1 }
+        - name: size
+          in: query
+          schema: { type: integer, default: 20 }
+      responses:
+        '200':
+          description: Danh sách tồn kho
+
+  /inventories/low-stock:
+    get:
+      tags: [05. Inventory & Warehouse]
+      summary: Cảnh báo danh sách sản phẩm sắp hết hàng (Dưới ngưỡng minThreshold)
+      parameters:
+        - name: storeId
+          in: query
+          schema: { type: integer }
+          description: Chi nhánh cần kiểm tra
+      responses:
+        '200':
+          description: Danh sách các mẫu áo sắp cạn hàng tại chi nhánh
+
+  /inventories/threshold:
+    put:
+      tags: [05. Inventory & Warehouse]
+      summary: Cấu hình lại ngưỡng cảnh báo hết hàng cho chi nhánh
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [storeId, productVariantId, minThreshold]
+              properties:
+                storeId: { type: integer }
+                productVariantId: { type: integer }
+                minThreshold: { type: integer, example: 5 }
+      responses:
+        '200':
+          description: Cập nhật ngưỡng cảnh báo thành công
+
+  /stock-transfers:
+    get:
+      tags: [05. Inventory & Warehouse]
+      summary: Lịch sử các phiếu chuyển kho giữa các chi nhánh
+      parameters:
+        - name: fromStoreId
+          in: query
+          schema: { type: integer }
+        - name: toStoreId
+          in: query
+          schema: { type: integer }
+        - name: status
+          in: query
+          schema: { type: string, enum: [DRAFT, SHIPPED, RECEIVED, REJECTED] }
+      responses:
+        '200':
+          description: Danh sách phiếu điều chuyển hàng
+
+    post:
+      tags: [05. Inventory & Warehouse]
+      summary: Tạo phiếu chuyển kho (Ví dụ từ Quận 3 sang Quận 1)
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StockTransferRequest'
+      responses:
+        '201':
+          description: Tạo phiếu chuyển thành công (Trạng thái DRAFT / SHIPPED)
+
+  /stock-transfers/{id}/status:
+    patch:
+      tags: [05. Inventory & Warehouse]
+      summary: Cập nhật trạng thái phiếu chuyển (Xác nhận nhận hàng bên nhận)
+      description: Khi chi nhánh nhận bấm RECEIVED, hệ thống tự động cộng kho bên nhận và trừ kho bên gửi.
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [status]
+              properties:
+                status:
+                  type: string
+                  enum: [SHIPPED, RECEIVED, REJECTED]
+      responses:
+        '200':
+          description: Cập nhật trạng thái chuyển kho và đồng bộ tồn kho thành công
+
+  # =========================================================================
+  # 06. POS & ORDERS
+  # =========================================================================
+  /orders:
+    get:
+      tags: [06. POS & Orders]
+      summary: Tra cứu danh sách đơn hàng (Lọc theo chi nhánh, kênh bán, thời gian)
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: storeId
+          in: query
+          schema: { type: integer }
+        - name: channel
+          in: query
+          schema: { type: string, enum: [POS, SHOPEE, TIKTOK, FACEBOOK] }
+        - name: status
+          in: query
+          schema: { type: string, enum: [COMPLETED, CANCELLED, RETURNED] }
+        - name: fromDate
+          in: query
+          schema: { type: string, format: date }
+        - name: toDate
+          in: query
+          schema: { type: string, format: date }
+        - name: page
+          in: query
+          schema: { type: integer, default: 1 }
+        - name: size
+          in: query
+          schema: { type: integer, default: 20 }
+      responses:
+        '200':
+          description: Danh sách hóa đơn bán hàng
+
+    post:
+      tags: [06. POS & Orders]
+      summary: "TẠO ĐƠN HÀNG MỚI (Bán tại quầy POS hoặc đơn Online)"
+      description: |
+        Tạo đơn hàng, khóa trừ tồn kho an toàn, hỗ trợ:
+        - Giảm giá từng sản phẩm hoặc giảm giá toàn đơn (Voucher/Hạng thẻ VIP).
+        - Thanh toán kết hợp: Tiền mặt + Quẹt thẻ + Chuyển khoản (Split payment).
+        - Tự động tích điểm cho khách và ghi nhận hoa hồng cho nhân viên.
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OrderCreateRequest'
+      responses:
+        '201':
+          description: Đơn hàng tạo thành công, trả về thông tin hóa đơn hoàn chỉnh
+        '400':
+          description: Hết hàng trong kho hoặc tổng tiền thanh toán không khớp
+
+  /orders/{orderCode}:
+    get:
+      tags: [06. POS & Orders]
+      summary: Xem chi tiết đơn hàng theo mã hóa đơn (Phục vụ in lại hóa đơn K80)
+      parameters:
+        - name: orderCode
+          in: path
+          required: true
+          schema: { type: string }
+          example: "HD-Q1-261031-01"
+      responses:
+        '200':
+          description: Chi tiết hóa đơn đầy đủ các món và phương thức thanh toán
+
+  /orders/{orderCode}/send-receipt:
+    post:
+      tags: [06. POS & Orders]
+      summary: Gửi hóa đơn điện tử cho khách qua Zalo ZNS hoặc Email
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: orderCode
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [sendType, destination]
+              properties:
+                sendType:
+                  type: string
+                  enum: [ZALO, EMAIL]
+                destination:
+                  type: string
+                  example: "0909123456 hoặc khachhang@gmail.com"
+      responses:
+        '200':
+          description: Đã gửi hóa đơn điện tử thành công
+
+  # =========================================================================
+  # 07. WORK SHIFTS
+  # =========================================================================
+  /shifts/open:
+    post:
+      tags: [07. Work Shifts]
+      summary: Mở ca làm việc thu ngân (Khai báo tiền lẻ đầu ca)
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OpenShiftRequest'
+      responses:
+        '201':
+          description: Mở ca thành công, sẵn sàng tính tiền POS
+        '400':
+          description: Nhân viên này đang có một ca khác chưa đóng
+
+  /shifts/close:
+    post:
+      tags: [07. Work Shifts]
+      summary: Đóng ca làm việc & Đối soát tiền mặt cuối ca
+      description: Thu ngân đếm tiền mặt thực tế trong két nhập vào. Hệ thống tính chênh lệch thừa/thiếu.
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CloseShiftRequest'
+      responses:
+        '200':
+          description: Đóng ca thành công, trả về phiếu đối soát tiền mặt & tổng tiền thẻ/chuyển khoản
+
+  /shifts/current:
+    get:
+      tags: [07. Work Shifts]
+      summary: Lấy thông tin ca làm việc đang mở của thu ngân hiện tại
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Thông tin ca trực hiện tại
+
+  /shifts:
+    get:
+      tags: [07. Work Shifts]
+      summary: Lịch sử các ca làm việc (Cho quản lý & kế toán đối soát)
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: storeId
+          in: query
+          schema: { type: integer }
+        - name: fromDate
+          in: query
+          schema: { type: string, format: date }
+        - name: toDate
+          in: query
+          schema: { type: string, format: date }
+      responses:
+        '200':
+          description: Danh sách ca trực và chênh lệch thu chi
+
+  # =========================================================================
+  # 08. CRM & CUSTOMERS
+  # =========================================================================
+  /customers:
+    get:
+      tags: [08. CRM & Customers]
+      summary: Danh sách khách hàng thân thiết
+      parameters:
+        - name: search
+          in: query
+          schema: { type: string }
+          description: Tìm theo tên hoặc SĐT
+        - name: tierId
+          in: query
+          schema: { type: integer }
+          description: Lọc theo hạng (Thường, Bạc, Vàng, VIP)
+      responses:
+        '200':
+          description: Danh sách khách hàng và điểm tích lũy
+
+    post:
+      tags: [08. CRM & Customers]
+      summary: Tạo mới hồ sơ khách hàng
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CustomerRequest'
+      responses:
+        '201':
+          description: Tạo khách hàng thành công
+
+  /customers/phone/{phone}:
+    get:
+      tags: [08. CRM & Customers]
+      summary: "TRA CỨU KHÁCH HÀNG THEO SĐT TẠI QUẦY POS"
+      description: Thu ngân gõ số điện thoại khách $\rightarrow$ Lập tức hiển thị điểm tích lũy và % chiết khấu theo hạng thẻ.
+      parameters:
+        - name: phone
+          in: path
+          required: true
+          schema: { type: string }
+          example: "0909123456"
+      responses:
+        '200':
+          description: Thông tin khách hàng, số điểm và mức giảm giá được hưởng
+        '404':
+          description: Khách hàng chưa đăng ký thành viên
+
+  /customer-tiers:
+    get:
+      tags: [08. CRM & Customers]
+      summary: Danh sách chính sách hạng thành viên (Thường, Bạc, Vàng, VIP)
+      responses:
+        '200':
+          description: Hạn mức chi tiêu và % giảm giá của từng hạng thẻ
+
+  # =========================================================================
+  # 09. PROMOTIONS & VOUCHERS
+  # =========================================================================
+  /vouchers:
+    get:
+      tags: [09. Promotions & Vouchers]
+      summary: Danh sách mã giảm giá khuyến mãi
+      responses:
+        '200':
+          description: Danh sách voucher
+    post:
+      tags: [09. Promotions & Vouchers]
+      summary: Tạo mã giảm giá mới
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VoucherRequest'
+      responses:
+        '201':
+          description: Tạo voucher thành công
+
+  /vouchers/validate:
+    post:
+      tags: [09. Promotions & Vouchers]
+      summary: Kiểm tra tính hợp lệ của mã Voucher trước khi bấm thanh toán
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [code, orderAmount]
+              properties:
+                code: { type: string, example: "CHAOMUNG2026" }
+                orderAmount: { type: number, example: 500000 }
+      responses:
+        '200':
+          description: Mã hợp lệ, trả về số tiền được giảm
+        '400':
+          description: Mã hết hạn, hết lượt dùng hoặc chưa đạt giá trị đơn tối thiểu
+
+  # =========================================================================
+  # 10. RETURNS
+  # =========================================================================
+  /returns:
+    get:
+      tags: [10. Returns]
+      summary: Lịch sử các phiếu đổi trả hàng
+      parameters:
+        - name: storeId
+          in: query
+          schema: { type: integer }
+      responses:
+        '200':
+          description: Danh sách phiếu đổi trả
+
+    post:
+      tags: [10. Returns]
+      summary: "TẠO PHIẾU ĐỔI TRẢ HÀNG (Trong vòng 7 ngày)"
+      description: |
+        Hệ thống tự động:
+        1. Kiểm tra ngày mua của hóa đơn gốc (<= 7 ngày).
+        2. Nhận lại sản phẩm, ghi nhận lý do và hoàn tiền mặt/đổi sang mẫu khác.
+        3. Lưu lại nhân viên phê duyệt (createdBy) để chống gian lận.
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReturnOrderRequest'
+      responses:
+        '201':
+          description: Tạo phiếu đổi trả thành công
+        '400':
+          description: Đã quá hạn 7 ngày kể từ khi mua
+
+  # =========================================================================
+  # 11. REPORTS & ANALYTICS
+  # =========================================================================
+  /reports/dashboard:
+    get:
+      tags: [11. Reports & Analytics]
+      summary: Báo cáo Dashboard tổng quan thời gian thực (Xem được trên điện thoại)
+      description: Doanh thu hôm nay, số đơn hàng hôm nay, số khách mới, tồn kho cảnh báo toàn chuỗi.
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Chỉ số kinh doanh tổng hợp
+
+  /reports/revenue:
+    get:
+      tags: [11. Reports & Analytics]
+      summary: Báo cáo doanh thu theo ngày/tuần/tháng, theo cửa hàng và theo nhân viên
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: groupBy
+          in: query
+          schema: { type: string, enum: [DAY, MONTH, STORE, STAFF] }
+        - name: fromDate
+          in: query
+          schema: { type: string, format: date }
+        - name: toDate
+          in: query
+          schema: { type: string, format: date }
+      responses:
+        '200':
+          description: Dữ liệu biểu đồ doanh số
+
+  /reports/profit:
+    get:
+      tags: [11. Reports & Analytics]
+      summary: Báo cáo Lợi nhuận gộp theo sản phẩm và theo danh mục
+      description: Tính chính xác dựa trên giá vốn tại thời điểm bán (costPrice) trừ đi chiết khấu.
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Lợi nhuận gộp chi tiết
+
+  /reports/products/best-sellers:
+    get:
+      tags: [11. Reports & Analytics]
+      summary: Top sản phẩm bán chạy nhất / bán chậm nhất
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: type
+          in: query
+          schema: { type: string, enum: [BEST_SELLER, SLOW_MOVING] }
+        - name: limit
+          in: query
+          schema: { type: integer, default: 10 }
+      responses:
+        '200':
+          description: Danh sách sản phẩm kèm số lượng và doanh số bán
+
+  /reports/export/excel:
+    get:
+      tags: [11. Reports & Analytics]
+      summary: Xuất dữ liệu doanh thu & kho ra file Excel (.xlsx)
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: File Excel tải về
+          content:
+            application/vnd.openxmlformats-officedocument.spreadsheetml.sheet:
+              schema:
+                type: string
+                format: binary
+
+  # =========================================================================
+  # 12. INTEGRATIONS
+  # =========================================================================
+  /integrations/shopee/sync-orders:
+    post:
+      tags: [12. Integrations]
+      summary: Đồng bộ đơn hàng mới từ sàn Shopee về hệ thống
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Đã đồng bộ đơn Shopee và trừ kho tương ứng
+
+  /integrations/tiktok/sync-orders:
+    post:
+      tags: [12. Integrations]
+      summary: Đồng bộ đơn hàng từ sàn TikTok Shop về hệ thống
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Đã đồng bộ đơn TikTok Shop
+
+  /shipping/create-order:
+    post:
+      tags: [12. Integrations]
+      summary: Đẩy đơn hàng sang hãng vận chuyển (GHN / GHTK) lấy mã vận đơn
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [orderId, carrier]
+              properties:
+                orderId: { type: integer }
+                carrier: { type: string, enum: [GHN, GHTK] }
+                codAmount: { type: number }
+      responses:
+        '200':
+          description: Tạo vận đơn thành công, trả về trackingCode
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    StoreRequest:
+      type: object
+      required: [code, name]
+      properties:
+        code: { type: string, example: "CN-Q1" }
+        name: { type: string, example: "Nắng Fashion - Quận 1" }
+        phone: { type: string, example: "02838110001" }
+        address: { type: string, example: "120 Hai Bà Trưng, P. Đa Kao, Q.1" }
+        isActive: { type: boolean, default: true }
+
+    UserRequest:
+      type: object
+      required: [role, username, password, fullName]
+      properties:
+        storeId: { type: integer, example: 1 }
+        role: { type: string, enum: [ADMIN, STORE_MANAGER, CASHIER, ACCOUNTANT] }
+        username: { type: string, example: "binh.le" }
+        password: { type: string, example: "123456" }
+        fullName: { type: string, example: "Lê Thị Bình" }
+        phone: { type: string, example: "0903000333" }
+        commissionRate: { type: number, example: 1.0 }
+        isActive: { type: boolean, default: true }
+
+    CategoryRequest:
+      type: object
+      required: [name, slug]
+      properties:
+        name: { type: string, example: "Áo sơ mi" }
+        slug: { type: string, example: "ao-so-mi" }
+        parentId: { type: integer, example: 1 }
+
+    BrandRequest:
+      type: object
+      required: [name]
+      properties:
+        name: { type: string, example: "Nắng Studio" }
+
+    ProductVariantRequest:
+      type: object
+      required: [sku, barcode, size, color, costPrice, retailPrice]
+      properties:
+        sku: { type: string, example: "DAM01-VANG-S" }
+        barcode: { type: string, example: "893850100101" }
+        size: { type: string, example: "S" }
+        color: { type: string, example: "Vàng" }
+        costPrice: { type: number, example: 160000 }
+        retailPrice: { type: number, example: 380000 }
+        imageUrl: { type: string, example: "https://nangfashion.com/images/dam01-vang.jpg" }
+
+    ProductRequest:
+      type: object
+      required: [code, name, categoryId, variants]
+      properties:
+        code: { type: string, example: "DAM-HOA-01" }
+        name: { type: string, example: "Đầm Hoa Nhí Vintage" }
+        categoryId: { type: integer, example: 1 }
+        brandId: { type: integer, example: 1 }
+        season: { type: string, example: "Thu Đông 2026" }
+        isActive: { type: boolean, default: true }
+        description: { type: string, example: "Chất liệu voan lụa cao cấp thoáng mát..." }
+        variants:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProductVariantRequest'
+
+    OpenShiftRequest:
+      type: object
+      required: [storeId, userId, initialCash]
+      properties:
+        storeId: { type: integer, example: 1 }
+        userId: { type: integer, example: 3 }
+        initialCash: { type: number, example: 1000000 }
+
+    CloseShiftRequest:
+      type: object
+      required: [shiftId, actualCash]
+      properties:
+        shiftId: { type: integer, example: 101 }
+        actualCash: { type: number, example: 5200000 }
+
+    OrderItemRequest:
+      type: object
+      required: [productVariantId, quantity, retailPrice]
+      properties:
+        productVariantId: { type: integer, example: 201 }
+        quantity: { type: integer, example: 1 }
+        retailPrice: { type: number, example: 380000 }
+        discountAmount: { type: number, example: 0 }
+
+    OrderPaymentRequest:
+      type: object
+      required: [paymentMethod, amount]
+      properties:
+        paymentMethod: { type: string, enum: [CASH, BANK_TRANSFER, CARD, MOMO, VNPAY] }
+        amount: { type: number, example: 300000 }
+        transactionReference: { type: string, example: "POS-VCB-99812" }
+
+    OrderCreateRequest:
+      type: object
+      required: [storeId, cashierId, channel, items, payments]
+      properties:
+        storeId: { type: integer, example: 1 }
+        customerId: { type: integer, example: 1001 }
+        shiftId: { type: integer, example: 101 }
+        cashierId: { type: integer, example: 3 }
+        sellerId: { type: integer, example: 3 }
+        channel: { type: string, enum: [POS, SHOPEE, TIKTOK, FACEBOOK], default: POS }
+        voucherCode: { type: string, example: "VIP50K" }
+        discountAmount: { type: number, example: 50000 }
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrderItemRequest'
+        payments:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrderPaymentRequest'
+
+    StockTransferRequest:
+      type: object
+      required: [fromStoreId, toStoreId, items]
+      properties:
+        fromStoreId: { type: integer, example: 2 }
+        toStoreId: { type: integer, example: 1 }
+        sentByUserId: { type: integer, example: 4 }
+        note: { type: string, example: "Chuyển 5 áo sơ mi gấp cho Q1" }
+        items:
+          type: array
+          items:
+            type: object
+            required: [productVariantId, quantity]
+            properties:
+              productVariantId: { type: integer, example: 204 }
+              quantity: { type: integer, example: 5 }
+
+    CustomerRequest:
+      type: object
+      required: [phone, fullName]
+      properties:
+        phone: { type: string, example: "0909123456" }
+        fullName: { type: string, example: "Nguyễn Thị Ngọc Anh" }
+        birthday: { type: string, format: date, example: "1995-11-05" }
+        tierId: { type: integer, example: 1 }
+
+    VoucherRequest:
+      type: object
+      required: [code, discountType, discountValue]
+      properties:
+        code: { type: string, example: "CHAOMUNG2026" }
+        discountType: { type: string, enum: [PERCENT, AMOUNT] }
+        discountValue: { type: number, example: 50000 }
+        minOrderAmount: { type: number, example: 300000 }
+        maxUses: { type: integer, example: 100 }
+        validFrom: { type: string, format: date, example: "2026-10-01" }
+        validTo: { type: string, format: date, example: "2026-12-31" }
+
+    ReturnOrderRequest:
+      type: object
+      required: [originalOrderId, storeId, createdById, items]
+      properties:
+        originalOrderId: { type: integer, example: 8001 }
+        storeId: { type: integer, example: 1 }
+        createdById: { type: integer, example: 3 }
+        refundAmount: { type: number, example: 0 }
+        items:
+          type: array
+          items:
+            type: object
+            required: [productVariantId, quantity]
+            properties:
+              productVariantId: { type: integer, example: 204 }
+              quantity: { type: integer, example: 1 }
+              returnReason: { type: string, example: "Khách mặc chật, đổi sang size L" }
