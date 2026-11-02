@@ -1,5 +1,7 @@
 package com.fashionshop.fashion_shop.dto.request;
 
+import com.fashionshop.fashion_shop.dto.response.StoreResponse;
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;

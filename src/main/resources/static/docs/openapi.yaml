@@ -17,7 +17,7 @@ info:
   contact:
     name: Đội ngũ phát triển Backend Nắng Fashion
 servers:
-  - url: http://localhost:8080/api/v1
+  - url: http://localhost:8080
     description: Máy chủ thử nghiệm cục bộ (Local Development)
 
 tags:
@@ -185,6 +185,20 @@ paths:
           description: Tạo chi nhánh thành công
 
   /stores/{id}:
+    get:
+      tags: [02. Stores]
+      summary: Lấy chi tiết thông tin chi nhánh theo ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+          example: 1
+      responses:
+        '200':
+          description: Lấy thông tin chi nhánh thành công
+        '404':
+          description: Không tìm thấy chi nhánh với ID đã cho
     put:
       tags: [02. Stores]
       summary: Cập nhật thông tin chi nhánh
