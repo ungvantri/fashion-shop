@@ -2,6 +2,7 @@ package com.fashionshop.fashion_shop.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.BatchSize;
 
 import java.util.List;
 
@@ -12,6 +13,7 @@ import java.util.List;
 @Setter
 @Builder
 @AllArgsConstructor
+@BatchSize(size = 50)
 public class Category {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -28,5 +30,6 @@ public class Category {
     private Category parent;
 
     @OneToMany(mappedBy = "parent")
+    @BatchSize(size = 50)
     private List<Category> children;
 }
