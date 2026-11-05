@@ -2,7 +2,7 @@ spring:
   application:
     name: fashion-shop
   datasource:
-    url: jdbc:mysql://localhost:3306/nang_fashion_db
+    url: jdbc:mysql://localhost:3306/nang_fashion_db?rewriteBatchedStatements=true
     username: root
     password: 123456
   jpa:
@@ -12,8 +12,19 @@ spring:
     properties:
       hibernate:
         format_sql: true
+        jdbc:
+          batch_size: 50
+          order_inserts: true
+          order_updates: true
 
 springdoc:
   swagger-ui:
     path: /swagger-ui.html
     url: /docs/openapi.yaml
+
+aws:
+  s3:
+    bucket-name: nang-fashion-storage-mock
+    region: ap-southeast-1
+    access-key: MOCK_AWS_ACCESS_KEY_123456
+    secret-key: MOCK_AWS_SECRET_KEY_abcdef123456

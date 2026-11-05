@@ -356,40 +356,74 @@ paths:
           in: path
           required: true
           schema: { type: integer }
+          description: ID sản phẩm cần cập nhật trạng thái
+        - name: isActive
+          in: query
+          required: true
+          schema: { type: boolean }
+          description: Trạng thái hiển thị (true - Đang bán, false - Ẩn/Tạm ngưng)
+      responses:
+        '200':
+          description: Cập nhật trạng thái hiển thị thành công
+
+  /products/import-excel/presigned-url:
+    get:
+      tags: [04. Products & Variants]
+      summary: Lấy presigned URL để tải file Excel lên AWS S3
+      description: Nhận presigned URL tạm thời cho phép client tải trực tiếp file Excel (.xlsx) lên S3 bucket mà không qua backend.
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: fileName
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Tên file Excel cần upload (ví dụ products_2026.xlsx)
+          example: "products_2026.xlsx"
+      responses:
+        '200':
+          description: Tạo presigned URL thành công
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean, example: true }
+                  message: { type: string, example: "Tạo đường dẫn upload S3 thành công" }
+                  data: { type: string, example: "https://nangfashion-bucket.s3.ap-southeast-1.amazonaws.com/excel/imports/1730810000000_products_2026.xlsx?..." }
+
+  /products/import-excel/process:
+    post:
+      tags: [04. Products & Variants]
+      summary: Xử lý nhập hàng loạt sản phẩm từ file Excel trên S3 (Batch processing)
+      description: Đọc file Excel từ S3 bucket theo `fileKey`, kiểm tra trùng lặp barcode/sku theo batch 1000, nạp danh mục/thương hiệu vào RAM, lưu sản phẩm & biến thể theo batch Hibernate 50 dòng.
+      security:
+        - BearerAuth: []
       requestBody:
         required: true
         content:
           application/json:
             schema:
               type: object
-              required: [isActive]
+              required: [fileKey]
               properties:
-                isActive: { type: boolean }
-      responses:
-        '200':
-          description: Cập nhật trạng thái hiển thị thành công
-
-  /products/import-excel:
-    post:
-      tags: [04. Products & Variants]
-      summary: Nhập hàng loạt sản phẩm và mã vạch từ file Excel
-      security:
-        - BearerAuth: []
-      requestBody:
-        required: true
-        content:
-          multipart/form-data:
-            schema:
-              type: object
-              required: [file]
-              properties:
-                file:
+                fileKey:
                   type: string
-                  format: binary
-                  description: File Excel (.xlsx) danh sách sản phẩm
+                  description: Key định danh của file trên S3 nhận được sau khi upload
+                  example: "excel/imports/1730810000000_products_2026.xlsx"
       responses:
         '200':
-          description: Nhập file thành công, trả về số lượng bản ghi đã tạo
+          description: Xử lý import thành công
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean, example: true }
+                  message: { type: string, example: "Nhập dữ liệu sản phẩm từ S3 vào database thành công" }
+                  data:
+                    $ref: '#/components/schemas/ProductImportResponse'
 
   /variants/barcode/{barcode}:
     get:
@@ -1029,6 +1063,28 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/ProductVariantRequest'
+
+    ProductImportResponse:
+      type: object
+      properties:
+        totalRows:
+          type: integer
+          description: Tổng số dòng đọc được từ file Excel
+          example: 50
+        totalProducts:
+          type: integer
+          description: Tổng số sản phẩm cha đã lưu thành công
+          example: 10
+        totalVariants:
+          type: integer
+          description: Tổng số biến thể sản phẩm đã lưu thành công
+          example: 45
+        errors:
+          type: array
+          description: Danh sách lỗi các dòng không hợp lệ hoặc trùng lặp
+          items:
+            type: string
+          example: ["Sản phẩm [DAM-HOA-01]: Dòng 5: SKU [DAM01-DO-M] đã tồn tại trong hệ thống"]
 
     OpenShiftRequest:
       type: object
