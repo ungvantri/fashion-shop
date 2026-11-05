@@ -2,6 +2,7 @@ package com.fashionshop.fashion_shop.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.BatchSize;
 
 import java.util.List;
 
@@ -31,6 +32,7 @@ public class Product {
     @Column(columnDefinition = "TEXT")
     private String description;
 
+    @BatchSize(size = 50)
     @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<ProductVariant> variants;
 
