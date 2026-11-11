@@ -313,6 +313,51 @@ paths:
         '201':
           description: Tạo sản phẩm và biến thể thành công
 
+  /products/search:
+    get:
+      tags: [04. Products & Variants]
+      summary: Tìm kiếm sản phẩm thông minh bằng Elasticsearch (Fuzzy Search, đa thuộc tính)
+      description: Tìm kiếm Full-Text theo từ khóa (hỗ trợ tiếng Việt không dấu, chống gõ sai) kết hợp lọc danh mục, thương hiệu, màu sắc, kích cỡ, khoảng giá bán.
+      parameters:
+        - name: keyword
+          in: query
+          schema: { type: string }
+          description: Từ khóa tìm kiếm (tên, mã sản phẩm, mô tả)
+          example: "ao so mi"
+        - name: categoryId
+          in: query
+          schema: { type: integer }
+          description: ID danh mục
+        - name: brandId
+          in: query
+          schema: { type: integer }
+          description: ID thương hiệu
+        - name: color
+          in: query
+          schema: { type: string }
+          description: Màu sắc (ví dụ Trắng, Đen)
+        - name: size
+          in: query
+          schema: { type: string }
+          description: Kích cỡ (ví dụ S, M, L, XL)
+        - name: minPrice
+          in: query
+          schema: { type: number }
+          description: Giá bán thấp nhất
+        - name: maxPrice
+          in: query
+          schema: { type: number }
+          description: Giá bán cao nhất
+        - name: page
+          in: query
+          schema: { type: integer, default: 1 }
+        - name: pageSize
+          in: query
+          schema: { type: integer, default: 20 }
+      responses:
+        '200':
+          description: Danh sách sản phẩm tìm kiếm phù hợp từ Elasticsearch
+
   /products/{id}:
     get:
       tags: [04. Products & Variants]

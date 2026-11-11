@@ -16,6 +16,8 @@ spring:
           batch_size: 50
           order_inserts: true
           order_updates: true
+  elasticsearch:
+    uris: http://localhost:9200
 
 springdoc:
   swagger-ui:
@@ -28,3 +30,5 @@ aws:
     region: ap-southeast-1
     access-key: MOCK_AWS_ACCESS_KEY_123456
     secret-key: MOCK_AWS_SECRET_KEY_abcdef123456
+
+

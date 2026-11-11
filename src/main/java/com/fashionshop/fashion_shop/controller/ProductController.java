@@ -6,6 +6,7 @@ import com.fashionshop.fashion_shop.dto.response.PageResponse;
 import com.fashionshop.fashion_shop.dto.response.ProductImportResponse;
 import com.fashionshop.fashion_shop.dto.response.ProductResponse;
 import com.fashionshop.fashion_shop.service.FileStorageService;
+import com.fashionshop.fashion_shop.service.ProductSearchService;
 import com.fashionshop.fashion_shop.service.ProductService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -13,6 +14,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.math.BigDecimal;
 import java.util.Map;
 
 @RestController
@@ -23,6 +25,9 @@ public class ProductController {
 
     @Autowired
     private FileStorageService fileStorageService;
+
+    @Autowired
+    private ProductSearchService productSearchService;
 
     @GetMapping
     public ResponseEntity<ApiResponse<PageResponse<ProductResponse>>> getProducts(
@@ -39,8 +44,31 @@ public class ProductController {
                 .message("Lấy danh sách sản phẩm theo trang thành công")
                 .data(pageResponse)
                 .build();
-        return ResponseEntity.status(HttpStatus.OK)
-                .body(result);
+        return ResponseEntity.status(HttpStatus.OK).body(result);
+    }
+
+    @GetMapping("/search")
+    public ResponseEntity<ApiResponse<PageResponse<ProductResponse>>> searchProducts(
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) Long categoryId,
+            @RequestParam(required = false) Long brandId,
+            @RequestParam(required = false) String color,
+            @RequestParam(required = false) String size,
+            @RequestParam(required = false) BigDecimal minPrice,
+            @RequestParam(required = false) BigDecimal maxPrice,
+            @RequestParam(defaultValue = "1") Integer page,
+            @RequestParam(defaultValue = "20") Integer pageSize
+    ) {
+        int pageIndex = (page > 0) ? page - 1 : 0;
+        PageResponse<ProductResponse> response = productSearchService.searchProducts(
+                keyword, categoryId, brandId, color, size, minPrice, maxPrice, pageIndex, pageSize
+        );
+        ApiResponse<PageResponse<ProductResponse>> result = ApiResponse.<PageResponse<ProductResponse>>builder()
+                .success(true)
+                .message("Tìm kiếm sản phẩm thành công từ Elasticsearch")
+                .data(response)
+                .build();
+        return ResponseEntity.status(HttpStatus.OK).body(result);
     }
 
     @PostMapping
