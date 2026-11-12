@@ -516,20 +516,24 @@ paths:
   /inventories/low-stock:
     get:
       tags: [05. Inventory & Warehouse]
-      summary: Cảnh báo danh sách sản phẩm sắp hết hàng (Dưới ngưỡng minThreshold)
+      summary: Cảnh báo danh sách sản phẩm sắp hết hàng (Tồn kho nhỏ hơn hoặc bằng minThreshold)
+      description: Trả về các dòng tồn kho có quantity <= minThreshold, sắp xếp theo quantity tăng dần.
       parameters:
         - name: storeId
           in: query
           schema: { type: integer }
-          description: Chi nhánh cần kiểm tra
+          description: Chi nhánh cần kiểm tra (bỏ trống để xem tất cả chi nhánh)
       responses:
         '200':
           description: Danh sách các mẫu áo sắp cạn hàng tại chi nhánh
+        '404':
+          description: Không tìm thấy chi nhánh với storeId đã truyền
 
   /inventories/threshold:
     put:
       tags: [05. Inventory & Warehouse]
       summary: Cấu hình lại ngưỡng cảnh báo hết hàng cho chi nhánh
+      description: Cập nhật minThreshold của một biến thể sản phẩm tại một chi nhánh. Dòng tồn kho (store + variant) phải tồn tại sẵn.
       security:
         - BearerAuth: []
       requestBody:
@@ -546,6 +550,10 @@ paths:
       responses:
         '200':
           description: Cập nhật ngưỡng cảnh báo thành công
+        '400':
+          description: Dữ liệu không hợp lệ (thiếu trường hoặc minThreshold < 0)
+        '404':
+          description: Không tìm thấy chi nhánh, biến thể sản phẩm hoặc dòng tồn kho tương ứng
 
   /stock-transfers:
     get:
