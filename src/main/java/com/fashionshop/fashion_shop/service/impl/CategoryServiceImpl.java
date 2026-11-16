@@ -8,6 +8,8 @@ import com.fashionshop.fashion_shop.mapper.CategoryMapper;
 import com.fashionshop.fashion_shop.repository.CategoryRepository;
 import com.fashionshop.fashion_shop.service.CategoryService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -22,6 +24,7 @@ public class CategoryServiceImpl implements CategoryService {
     private CategoryMapper categoryMapper;
 
     @Override
+    @Cacheable(value = "categories", key = "'all'")
     public List<CategoryResponse> getAllCategories() {
         List<Category> categories = categoryRepository.findAll();
         return categoryMapper.toListDto(categories);
@@ -29,6 +32,7 @@ public class CategoryServiceImpl implements CategoryService {
 
     @Override
     @Transactional
+    @CacheEvict(value = "categories", allEntries = true)
     public CategoryResponse createCategory(CategoryRequest categoryRequest) {
         Category category = categoryMapper.toEntity(categoryRequest);
         if (categoryRequest.getParentId() != null) {

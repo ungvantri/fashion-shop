@@ -7,6 +7,7 @@ import com.fashionshop.fashion_shop.mapper.ProductVariantMapper;
 import com.fashionshop.fashion_shop.repository.ProductVariantRepository;
 import com.fashionshop.fashion_shop.service.VariantService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -16,7 +17,9 @@ public class VariantServiceImpl implements VariantService {
 
     @Autowired
     private ProductVariantMapper productVariantMapper;
+
     @Override
+    @Cacheable(value = "variants", key = "'barcode:' + #barcode")
     public ProductVariantResponse getVariantByBarcode(String barcode) {
         ProductVariant productVariant = productVariantRepository.findByBarcode(barcode).orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy biến thể với mã vạch: " + barcode));
         return productVariantMapper.toDto(productVariant);

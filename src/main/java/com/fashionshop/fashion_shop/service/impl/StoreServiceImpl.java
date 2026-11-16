@@ -8,6 +8,10 @@ import com.fashionshop.fashion_shop.mapper.StoreMapper;
 import com.fashionshop.fashion_shop.repository.StoreRepository;
 import com.fashionshop.fashion_shop.service.StoreService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.CachePut;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.annotation.Caching;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -22,6 +26,7 @@ public class StoreServiceImpl implements StoreService {
     private StoreMapper storeMapper;
 
     @Override
+    @Cacheable(value = "stores", key = "'all'")
     public List<StoreResponse> getAllStores() {
         List<Store> stores = storeRepository.findAll();
         return storeMapper.toListDto(stores);
@@ -29,6 +34,7 @@ public class StoreServiceImpl implements StoreService {
 
     @Override
     @Transactional
+    @CacheEvict(value = "stores", allEntries = true)
     public StoreResponse createStore(StoreRequest storeRequest) {
         Store store = storeMapper.toEntity(storeRequest);
         Store saved = storeRepository.save(store);
@@ -37,6 +43,10 @@ public class StoreServiceImpl implements StoreService {
 
     @Override
     @Transactional
+    @Caching(
+            put = { @CachePut(value = "stores", key = "'id:' + #id") },
+            evict = { @CacheEvict(value = "stores", key = "'all'") }
+    )
     public StoreResponse updateStore(Long id, StoreRequest storeRequest) {
         Store store = storeRepository.findById(id).orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy chi nhánh có id: " + id));
         store.setCode(storeRequest.getCode());
@@ -49,6 +59,7 @@ public class StoreServiceImpl implements StoreService {
     }
 
     @Override
+    @Cacheable(value = "stores", key = "'id:' + #id")
     public StoreResponse getStoreById(Long id) {
         Store store = storeRepository.findById(id).orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy chi nhánh có id: " + id));
         return storeMapper.toDto(store);

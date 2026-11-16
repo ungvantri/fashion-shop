@@ -18,6 +18,16 @@ spring:
           order_updates: true
   elasticsearch:
     uris: http://localhost:9200
+  data:
+    redis:
+      host: localhost
+      port: 6379
+      timeout: 3000ms
+  cache:
+    type: redis
+    redis:
+      time-to-live: 3600000
+      cache-null-values: false
 
 springdoc:
   swagger-ui:

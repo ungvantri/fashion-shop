@@ -21,6 +21,10 @@ import com.fashionshop.fashion_shop.service.FileStorageService;
 import com.fashionshop.fashion_shop.service.ProductService;
 import com.fashionshop.fashion_shop.util.ExcelHelper;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.CachePut;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.annotation.Caching;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -95,6 +99,7 @@ public class ProductServiceImpl implements ProductService {
     }
 
     @Override
+    @Cacheable(value = "products", key = "'id:' + #id")
     public ProductResponse getProductById(Long id) {
         Product product = productRepository.findById(id).orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy sản phẩm có id: " + id));
         return productMapper.toDto(product);
@@ -102,6 +107,10 @@ public class ProductServiceImpl implements ProductService {
 
     @Override
     @Transactional
+    @Caching(
+            put = { @CachePut(value = "products", key = "'id:' + #id") },
+            evict = { @CacheEvict(value = "variants", allEntries = true) }
+    )
     public ProductResponse updateProduct(Long id, ProductRequest productRequest) {
         Product product = productRepository.findById(id).orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy sản phẩm có id: " + id));
         Category category = categoryRepository.findById(productRequest.getCategoryId()).orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy danh mục có id: " + productRequest.getCategoryId()));
@@ -153,6 +162,7 @@ public class ProductServiceImpl implements ProductService {
 
     @Override
     @Transactional
+    @CacheEvict(value = "products", key = "'id:' + #id")
     public ProductResponse updateStatusProduct(Long id, Boolean isActive) {
         Product product = productRepository.findById(id).orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy sản phẩm có id: " + id));
         product.setIsActive(isActive);

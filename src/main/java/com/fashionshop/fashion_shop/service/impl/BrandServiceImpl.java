@@ -7,6 +7,8 @@ import com.fashionshop.fashion_shop.mapper.BrandMapper;
 import com.fashionshop.fashion_shop.repository.BrandRepository;
 import com.fashionshop.fashion_shop.service.BrandService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -21,6 +23,7 @@ public class BrandServiceImpl implements BrandService {
     private BrandMapper brandMapper;
 
     @Override
+    @Cacheable(value = "brands", key = "'all'")
     public List<BrandResponse> getAllBrands() {
         List<Brand> brands = brandRepository.findAll();
         return brandMapper.toListDto(brands);
@@ -28,6 +31,7 @@ public class BrandServiceImpl implements BrandService {
 
     @Override
     @Transactional
+    @CacheEvict(value = "brands", allEntries = true)
     public BrandResponse createBrand(BrandRequest brandRequest) {
         Brand brand = brandMapper.toEntity(brandRequest);
         Brand saved = brandRepository.save(brand);
