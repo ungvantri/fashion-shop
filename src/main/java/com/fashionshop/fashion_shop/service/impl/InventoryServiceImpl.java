@@ -1,5 +1,6 @@
 package com.fashionshop.fashion_shop.service.impl;
 
+import com.fashionshop.fashion_shop.document.ProductDocument;
 import com.fashionshop.fashion_shop.dto.request.StoreInventoryThresholdRequest;
 import com.fashionshop.fashion_shop.dto.response.PageResponse;
 import com.fashionshop.fashion_shop.dto.response.StoreInventoryResponse;
@@ -8,18 +9,21 @@ import com.fashionshop.fashion_shop.entity.Store;
 import com.fashionshop.fashion_shop.entity.StoreInventory;
 import com.fashionshop.fashion_shop.exception.ResourceNotFoundException;
 import com.fashionshop.fashion_shop.mapper.StoreInventoryMapper;
+import com.fashionshop.fashion_shop.repository.ProductElasticsearchRepository;
 import com.fashionshop.fashion_shop.repository.ProductVariantRepository;
 import com.fashionshop.fashion_shop.repository.StoreInventoryRepository;
 import com.fashionshop.fashion_shop.repository.StoreRepository;
 import com.fashionshop.fashion_shop.service.InventoryService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Collections;
 import java.util.List;
 
 @Service
@@ -35,6 +39,9 @@ public class InventoryServiceImpl implements InventoryService {
     private ProductVariantRepository productVariantRepository;
 
     @Autowired
+    private ProductElasticsearchRepository productElasticsearchRepository;
+
+    @Autowired
     private StoreInventoryMapper storeInventoryMapper;
 
     @Override
@@ -44,8 +51,38 @@ public class InventoryServiceImpl implements InventoryService {
         Sort sort = Sort.by("id").descending();
         Pageable pageable = PageRequest.of(pageIndex, pageSize, sort);
 
+        Page<StoreInventory> pageData;
         String cleanSearch = (search != null && !search.isBlank()) ? search.trim() : null;
-        Page<StoreInventory> pageData = storeInventoryRepository.findInventories(storeId, cleanSearch, pageable);
+
+        if (cleanSearch != null) {
+            try {
+                // Tối ưu hóa: Tìm kiếm full-text qua Elasticsearch (hỗ trợ tiếng Việt không dấu, chống gõ sai)
+                Page<ProductDocument> esDocs = productElasticsearchRepository.searchForInventory(
+                        cleanSearch,
+                        PageRequest.of(0, 100)
+                );
+
+                List<Long> matchedVariantIds = esDocs.getContent().stream()
+                        .filter(doc -> doc.getVariants() != null)
+                        .flatMap(doc -> doc.getVariants().stream())
+                        .map(ProductDocument.VariantDocument::getId)
+                        .toList();
+
+                if (!matchedVariantIds.isEmpty()) {
+                    // Truy vấn theo Index Primary Key (IN variantIds), siêu tốc
+                    pageData = storeInventoryRepository.findInventoriesByVariantIds(storeId, matchedVariantIds, pageable);
+                } else {
+                    // Fallback sang LIKE của MySQL nếu Elasticsearch chưa được sync index
+                    pageData = storeInventoryRepository.findInventories(storeId, cleanSearch, pageable);
+                }
+            } catch (Exception e) {
+                // Fallback an toàn về MySQL query nếu Elasticsearch chưa khởi động
+                pageData = storeInventoryRepository.findInventories(storeId, cleanSearch, pageable);
+            }
+        } else {
+            // Không tìm kiếm từ khóa, truy vấn thẳng MySQL với phân trang
+            pageData = storeInventoryRepository.findAllInventories(storeId, pageable);
+        }
 
         List<StoreInventoryResponse> items = storeInventoryMapper.toListDto(pageData.getContent());
 

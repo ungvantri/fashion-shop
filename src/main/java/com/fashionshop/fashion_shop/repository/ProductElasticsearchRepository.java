@@ -113,4 +113,37 @@ public interface ProductElasticsearchRepository extends ElasticsearchRepository<
     }
     """)
     Page<ProductDocument> findByPriceRange(BigDecimal minPrice, BigDecimal maxPrice, Pageable pageable);
+
+    // =========================================================================
+    // 6. Tìm kiếm danh sách Product khớp từ khóa phục vụ tra cứu nhanh tồn kho
+    // ?0: từ khóa tìm kiếm (hỗ trợ name, code, sku, barcode)
+    // =========================================================================
+    @Query("""
+    {
+      "bool": {
+        "should": [
+          {
+            "multi_match": {
+              "query": "?0",
+              "fields": ["name^3", "code^2", "description"],
+              "fuzziness": "AUTO"
+            }
+          },
+          {
+            "nested": {
+              "path": "variants",
+              "query": {
+                "multi_match": {
+                  "query": "?0",
+                  "fields": ["variants.sku^3", "variants.barcode^3"]
+                }
+              }
+            }
+          }
+        ],
+        "minimum_should_match": 1
+      }
+    }
+    """)
+    Page<ProductDocument> searchForInventory(String keyword, Pageable pageable);
 }

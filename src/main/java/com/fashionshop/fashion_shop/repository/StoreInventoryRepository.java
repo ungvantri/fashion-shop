@@ -19,6 +19,26 @@ public interface StoreInventoryRepository extends JpaRepository<StoreInventory, 
             "JOIN FETCH si.productVariant pv " +
             "JOIN FETCH pv.product p " +
             "WHERE (:storeId IS NULL OR s.id = :storeId) " +
+            "AND pv.id IN :variantIds",
+            countQuery = "SELECT COUNT(si) FROM StoreInventory si " +
+            "WHERE (:storeId IS NULL OR si.store.id = :storeId) " +
+            "AND si.productVariant.id IN :variantIds")
+    Page<StoreInventory> findInventoriesByVariantIds(@Param("storeId") Long storeId, @Param("variantIds") List<Long> variantIds, Pageable pageable);
+
+    @Query(value = "SELECT si FROM StoreInventory si " +
+            "JOIN FETCH si.store s " +
+            "JOIN FETCH si.productVariant pv " +
+            "JOIN FETCH pv.product p " +
+            "WHERE (:storeId IS NULL OR s.id = :storeId)",
+            countQuery = "SELECT COUNT(si) FROM StoreInventory si " +
+            "WHERE (:storeId IS NULL OR si.store.id = :storeId)")
+    Page<StoreInventory> findAllInventories(@Param("storeId") Long storeId, Pageable pageable);
+
+    @Query(value = "SELECT si FROM StoreInventory si " +
+            "JOIN FETCH si.store s " +
+            "JOIN FETCH si.productVariant pv " +
+            "JOIN FETCH pv.product p " +
+            "WHERE (:storeId IS NULL OR s.id = :storeId) " +
             "AND (:search IS NULL OR (" +
             "  LOWER(p.name) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
             "  LOWER(pv.sku) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
