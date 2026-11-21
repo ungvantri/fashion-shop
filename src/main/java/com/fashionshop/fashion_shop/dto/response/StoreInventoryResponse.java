@@ -22,5 +22,5 @@ public class StoreInventoryResponse {
     private BigDecimal retailPrice;
     private Integer quantity;
     private Integer minThreshold;
-    private Boolean isLowStock; // Cờ cảnh báo sắp hết hàng
+    private Boolean isLowStock;
 }

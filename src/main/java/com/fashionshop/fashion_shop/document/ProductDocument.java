@@ -20,8 +20,6 @@ public class ProductDocument {
     @Id
     private Long id;
 
-    // FieldType.Text với vietnamese_analyzer: Tự động chuyển chữ hoa thành thường + bỏ dấu tiếng Việt (asciifolding)
-    // Sub-field .keyword: Dùng để lọc chính xác hoặc sắp xếp (Sort)
     @MultiField(
             mainField = @Field(type = FieldType.Text, analyzer = "vietnamese_analyzer", searchAnalyzer = "vietnamese_analyzer"),
             otherFields = {
@@ -47,34 +45,30 @@ public class ProductDocument {
     @Field(type = FieldType.Text, analyzer = "vietnamese_analyzer", searchAnalyzer = "vietnamese_analyzer")
     private String description;
 
-    // Thông tin Category (lưu sẵn tên để không cần join)
     @Field(type = FieldType.Long)
     private Long categoryId;
 
     @Field(type = FieldType.Keyword)
     private String categoryName;
 
-    // Thông tin Brand
     @Field(type = FieldType.Long)
     private Long brandId;
 
     @Field(type = FieldType.Keyword)
     private String brandName;
 
-    // Gom các thuộc tính của Variants lên Product để lọc siêu tốc
     @Field(type = FieldType.Keyword)
-    private Set<String> colors; // Ví dụ: ["Đỏ", "Xanh", "Trắng"]
+    private Set<String> colors;
 
     @Field(type = FieldType.Keyword)
-    private Set<String> sizes;  // Ví dụ: ["S", "M", "L", "XL"]
+    private Set<String> sizes;
 
     @Field(type = FieldType.Double)
-    private BigDecimal minPrice; // Giá thấp nhất trong các variant (để lọc khoảng giá)
+    private BigDecimal minPrice;
 
     @Field(type = FieldType.Double)
-    private BigDecimal maxPrice; // Giá cao nhất trong các variant
+    private BigDecimal maxPrice;
 
-    // Chi tiết từng biến thể
     @Field(type = FieldType.Nested)
     private List<VariantDocument> variants;
 

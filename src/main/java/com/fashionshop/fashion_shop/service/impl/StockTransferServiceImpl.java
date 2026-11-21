@@ -184,7 +184,6 @@ public class StockTransferServiceImpl implements StockTransferService {
         }
 
         if (newStatus == TransferStatus.RECEIVED) {
-            // Validate người nhận trước khi đụng vào tồn kho
             User receivedByUser = null;
             if (request.getReceivedByUserId() != null) {
                 receivedByUser = userRepository.findById(request.getReceivedByUserId())
@@ -192,7 +191,6 @@ public class StockTransferServiceImpl implements StockTransferService {
                                 "Không tìm thấy nhân viên nhận hàng với ID: " + request.getReceivedByUserId()));
             }
 
-            // Kho gửi đã trừ lúc tạo phiếu, giờ chỉ cộng vào kho nhận
             addStock(stockTransfer.getToStore(), stockTransfer.getItems());
 
             stockTransfer.setReceivedAt(LocalDateTime.now());
@@ -200,7 +198,6 @@ public class StockTransferServiceImpl implements StockTransferService {
                 stockTransfer.setReceivedByUser(receivedByUser);
             }
         } else if (newStatus == TransferStatus.REJECTED) {
-            // Từ chối: hoàn trả hàng về kho gửi
             addStock(stockTransfer.getFromStore(), stockTransfer.getItems());
         }
 
@@ -244,7 +241,6 @@ public class StockTransferServiceImpl implements StockTransferService {
             inventory.setQuantity(inventory.getQuantity() + item.getQuantity());
         }
 
-        // Chỉ cần save các dòng mới; dòng cũ đang managed nên Hibernate tự UPDATE lúc commit
         storeInventoryRepository.saveAll(newInventories);
     }
 }

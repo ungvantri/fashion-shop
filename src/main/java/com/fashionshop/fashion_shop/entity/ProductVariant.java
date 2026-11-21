@@ -10,7 +10,6 @@ import java.math.BigDecimal;
 @Table(
         name = "product_variants",
         indexes = {
-                // Đánh Index barcode để quét tại POS < 2s
                 @Index(name = "idx_variant_barcode", columnList = "barcode", unique = true)
         }
 )

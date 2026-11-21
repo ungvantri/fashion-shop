@@ -11,11 +11,6 @@ import java.math.BigDecimal;
 
 @Repository
 public interface ProductElasticsearchRepository extends ElasticsearchRepository<ProductDocument, Long> {
-
-    // =========================================================================
-    // 1. Tìm kiếm Full-Text theo từ khóa (Name, Code, Description) kèm chống gõ sai
-    // ?0: từ khóa tìm kiếm (keyword)
-    // =========================================================================
     @Query("""
     {
       "bool": {
@@ -36,10 +31,6 @@ public interface ProductElasticsearchRepository extends ElasticsearchRepository<
     """)
     Page<ProductDocument> searchByKeyword(String keyword, Pageable pageable);
 
-    // =========================================================================
-    // 2. Tìm kiếm theo từ khóa VÀ Lọc theo Danh mục
-    // ?0: từ khóa, ?1: categoryId
-    // =========================================================================
     @Query("""
     {
       "bool": {
@@ -61,10 +52,6 @@ public interface ProductElasticsearchRepository extends ElasticsearchRepository<
     """)
     Page<ProductDocument> searchByKeywordAndCategory(String keyword, Long categoryId, Pageable pageable);
 
-    // =========================================================================
-    // 3. Chỉ chọn Danh mục (không gõ từ khóa)
-    // ?0: categoryId
-    // =========================================================================
     @Query("""
     {
       "bool": {
@@ -77,10 +64,6 @@ public interface ProductElasticsearchRepository extends ElasticsearchRepository<
     """)
     Page<ProductDocument> findByCategoryId(Long categoryId, Pageable pageable);
 
-    // =========================================================================
-    // 4. Lọc sản phẩm theo Màu sắc và Kích cỡ
-    // ?0: màu sắc (ví dụ: "Đen"), ?1: kích cỡ (ví dụ: "M")
-    // =========================================================================
     @Query("""
     {
       "bool": {
@@ -94,10 +77,6 @@ public interface ProductElasticsearchRepository extends ElasticsearchRepository<
     """)
     Page<ProductDocument> findByColorAndSize(String color, String size, Pageable pageable);
 
-    // =========================================================================
-    // 5. Lọc theo Khoảng giá bán (Price Range)
-    // ?0: minPrice, ?1: maxPrice
-    // =========================================================================
     @Query("""
     {
       "bool": {
@@ -114,10 +93,6 @@ public interface ProductElasticsearchRepository extends ElasticsearchRepository<
     """)
     Page<ProductDocument> findByPriceRange(BigDecimal minPrice, BigDecimal maxPrice, Pageable pageable);
 
-    // =========================================================================
-    // 6. Tìm kiếm danh sách Product khớp từ khóa phục vụ tra cứu nhanh tồn kho
-    // ?0: từ khóa tìm kiếm (hỗ trợ name, code, sku, barcode)
-    // =========================================================================
     @Query("""
     {
       "bool": {

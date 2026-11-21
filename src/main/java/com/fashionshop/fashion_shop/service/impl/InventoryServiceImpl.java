@@ -56,7 +56,6 @@ public class InventoryServiceImpl implements InventoryService {
 
         if (cleanSearch != null) {
             try {
-                // Tối ưu hóa: Tìm kiếm full-text qua Elasticsearch (hỗ trợ tiếng Việt không dấu, chống gõ sai)
                 Page<ProductDocument> esDocs = productElasticsearchRepository.searchForInventory(
                         cleanSearch,
                         PageRequest.of(0, 100)
@@ -69,18 +68,14 @@ public class InventoryServiceImpl implements InventoryService {
                         .toList();
 
                 if (!matchedVariantIds.isEmpty()) {
-                    // Truy vấn theo Index Primary Key (IN variantIds), siêu tốc
                     pageData = storeInventoryRepository.findInventoriesByVariantIds(storeId, matchedVariantIds, pageable);
                 } else {
-                    // Fallback sang LIKE của MySQL nếu Elasticsearch chưa được sync index
                     pageData = storeInventoryRepository.findInventories(storeId, cleanSearch, pageable);
                 }
             } catch (Exception e) {
-                // Fallback an toàn về MySQL query nếu Elasticsearch chưa khởi động
                 pageData = storeInventoryRepository.findInventories(storeId, cleanSearch, pageable);
             }
         } else {
-            // Không tìm kiếm từ khóa, truy vấn thẳng MySQL với phân trang
             pageData = storeInventoryRepository.findAllInventories(storeId, pageable);
         }
 

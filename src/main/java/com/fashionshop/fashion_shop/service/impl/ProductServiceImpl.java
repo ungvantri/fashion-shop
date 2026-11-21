@@ -232,23 +232,21 @@ public class ProductServiceImpl implements ProductService {
                 continue;
             }
 
-            // Kiểm tra trùng Barcode trong file Excel
             if (!scannedBarcodesInFile.add(row.getBarcode())) {
                 errors.add("Dòng " + line + ": Trùng mã Barcode [" + row.getBarcode() + "] trong file Excel.");
                 continue;
             }
-            // Kiểm tra trùng Barcode với Database
+
             if (existingDbBarcodes.contains(row.getBarcode())) {
                 errors.add("Dòng " + line + ": Mã Barcode [" + row.getBarcode() + "] đã tồn tại trên hệ thống.");
                 continue;
             }
 
-            // Kiểm tra trùng SKU trong file Excel
             if (!scannedSkusInFile.add(row.getSku())) {
                 errors.add("Dòng " + line + ": Trùng mã SKU [" + row.getSku() + "] trong file Excel.");
                 continue;
             }
-            // Kiểm tra trùng SKU với Database
+
             if (existingDbSkus.contains(row.getSku())) {
                 errors.add("Dòng " + line + ": Mã SKU [" + row.getSku() + "] đã tồn tại trên hệ thống.");
                 continue;
@@ -268,14 +266,12 @@ public class ProductServiceImpl implements ProductService {
             List<ProductExcelRowDto> variantRows = entry.getValue();
             ProductExcelRowDto first = variantRows.get(0);
 
-            // Lấy Category từ Map trong RAM
             Category category = first.getCategoryId() != null ? categoryMap.get(first.getCategoryId()) : null;
             if (category == null) {
                 errors.add("Sản phẩm [" + code + "]: Không tìm thấy Category ID " + first.getCategoryId());
                 continue;
             }
 
-            // Lấy Brand từ Map trong RAM
             Brand brand = first.getBrandId() != null ? brandMap.get(first.getBrandId()) : null;
 
             Product product = Product.builder()
@@ -314,7 +310,7 @@ public class ProductServiceImpl implements ProductService {
         for (int i = 0; i < productsToSave.size(); i += SAVE_BATCH_SIZE) {
             List<Product> batchChunk = productsToSave.subList(i, Math.min(i + SAVE_BATCH_SIZE, productsToSave.size()));
             productRepository.saveAll(batchChunk);
-            productRepository.flush(); // Ép gửi các câu lệnh SQL xuống DB
+            productRepository.flush();
             totalProductsSaved += batchChunk.size();
         }
 

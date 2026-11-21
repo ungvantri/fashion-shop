@@ -21,7 +21,6 @@ public class AwsS3Config {
     @Value("${aws.s3.secret-key}")
     private String secretKey;
 
-    // 1. Bean dùng để đọc file, tải file ngầm từ S3
     @Bean
     public S3Client s3Client() {
         AwsBasicCredentials credentials = AwsBasicCredentials.create(accessKey, secretKey);
@@ -31,7 +30,6 @@ public class AwsS3Config {
                 .build();
     }
 
-    // 2. Bean dùng để tạo Presigned URL cho Frontend upload
     @Bean
     public S3Presigner s3Presigner() {
         AwsBasicCredentials credentials = AwsBasicCredentials.create(accessKey, secretKey);
