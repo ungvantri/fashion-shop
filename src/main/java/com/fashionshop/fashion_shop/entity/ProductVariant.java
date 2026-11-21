@@ -2,6 +2,7 @@ package com.fashionshop.fashion_shop.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.BatchSize;
 
 import java.math.BigDecimal;
 
@@ -18,6 +19,7 @@ import java.math.BigDecimal;
 @Setter
 @Builder
 @AllArgsConstructor
+@BatchSize(size = 50)
 public class ProductVariant {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

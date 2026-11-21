@@ -8,6 +8,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -62,5 +63,7 @@ public interface StoreInventoryRepository extends JpaRepository<StoreInventory, 
             "ORDER BY si.quantity ASC")
     List<StoreInventory> findLowStockInventories(@Param("storeId") Long storeId);
 
-    Optional<StoreInventory> findByStoreIdAndProductVariantId(Long storeId, Long productVariantId);
+    @Query("SELECT si FROM StoreInventory si WHERE si.store.id = :storeId AND si.productVariant.id IN :variantIds")
+    List<StoreInventory> findByStoreIdAndVariantIds(@Param("storeId") Long storeId,
+                                                    @Param("variantIds") List<Long> variantIds);
 }

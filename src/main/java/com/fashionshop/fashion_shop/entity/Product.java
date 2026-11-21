@@ -13,6 +13,7 @@ import java.util.List;
 @Setter
 @Builder
 @AllArgsConstructor
+@BatchSize(size = 50)
 public class Product {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

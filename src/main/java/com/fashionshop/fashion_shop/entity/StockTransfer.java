@@ -3,6 +3,7 @@ package com.fashionshop.fashion_shop.entity;
 import com.fashionshop.fashion_shop.enums.TransferStatus;
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.BatchSize;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -49,6 +50,7 @@ public class StockTransfer {
     @Column(columnDefinition = "TEXT")
     private String note;
 
+    @BatchSize(size = 50)
     @OneToMany(mappedBy = "transfer", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<StockTransferItem> items;
 }
