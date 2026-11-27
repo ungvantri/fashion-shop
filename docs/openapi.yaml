@@ -125,6 +125,22 @@ paths:
           description: Tạo tài khoản thành công
 
   /users/{id}:
+    get:
+      tags: [01. Authentication & Users]
+      summary: Xem chi tiết thông tin nhân viên theo ID
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: Thông tin chi tiết nhân viên
+        '404':
+          description: Không tìm thấy nhân viên
+
     put:
       tags: [01. Authentication & Users]
       summary: Cập nhật thông tin nhân viên hoặc tỷ lệ hoa hồng
@@ -140,7 +156,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/UserRequest'
+              $ref: '#/components/schemas/UserUpdateRequest'
       responses:
         '200':
           description: Cập nhật thành công
@@ -569,6 +585,12 @@ paths:
         - name: status
           in: query
           schema: { type: string, enum: [DRAFT, SHIPPED, RECEIVED, REJECTED] }
+        - name: page
+          in: query
+          schema: { type: integer, default: 1 }
+        - name: size
+          in: query
+          schema: { type: integer, default: 20 }
       responses:
         '200':
           description: Danh sách phiếu điều chuyển hàng
@@ -588,11 +610,29 @@ paths:
         '201':
           description: Tạo phiếu chuyển thành công (Trạng thái DRAFT / SHIPPED)
 
+  /stock-transfers/{id}:
+    get:
+      tags: [05. Inventory & Warehouse]
+      summary: Lấy chi tiết phiếu chuyển kho theo ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: Chi tiết phiếu chuyển kho và danh sách sản phẩm chuyển
+        '404':
+          description: Không tìm thấy phiếu chuyển kho
+
   /stock-transfers/{id}/status:
     patch:
       tags: [05. Inventory & Warehouse]
       summary: Cập nhật trạng thái phiếu chuyển (Xác nhận nhận hàng bên nhận)
-      description: Khi chi nhánh nhận bấm RECEIVED, hệ thống tự động cộng kho bên nhận và trừ kho bên gửi.
+      description: |
+        - Trừ tồn kho bên gửi ngay khi tạo phiếu chuyển (trạng thái SHIPPED).
+        - Khi chi nhánh nhận bấm RECEIVED, hệ thống tự động cộng tồn kho bên nhận.
+        - Nếu bấm REJECTED (từ chối nhận), hệ thống tự động hoàn trả số lượng lại kho bên gửi.
       security:
         - BearerAuth: []
       parameters:
@@ -611,6 +651,10 @@ paths:
                 status:
                   type: string
                   enum: [SHIPPED, RECEIVED, REJECTED]
+                receivedByUserId:
+                  type: integer
+                  example: 3
+                  description: ID nhân viên chi nhánh nhận bấm xác nhận
       responses:
         '200':
           description: Cập nhật trạng thái chuyển kho và đồng bộ tồn kho thành công
@@ -759,6 +803,12 @@ paths:
       summary: Lấy thông tin ca làm việc đang mở của thu ngân hiện tại
       security:
         - BearerAuth: []
+      parameters:
+        - name: userId
+          in: query
+          required: true
+          schema: { type: integer }
+          description: ID của nhân viên đang kiểm tra ca
       responses:
         '200':
           description: Thông tin ca trực hiện tại
@@ -773,12 +823,24 @@ paths:
         - name: storeId
           in: query
           schema: { type: integer }
+        - name: userId
+          in: query
+          schema: { type: integer }
+        - name: status
+          in: query
+          schema: { type: string, enum: [OPEN, CLOSED] }
         - name: fromDate
           in: query
           schema: { type: string, format: date }
         - name: toDate
           in: query
           schema: { type: string, format: date }
+        - name: page
+          in: query
+          schema: { type: integer, default: 1 }
+        - name: size
+          in: query
+          schema: { type: integer, default: 20 }
       responses:
         '200':
           description: Danh sách ca trực và chênh lệch thu chi
@@ -799,6 +861,12 @@ paths:
           in: query
           schema: { type: integer }
           description: Lọc theo hạng (Thường, Bạc, Vàng, VIP)
+        - name: page
+          in: query
+          schema: { type: integer, default: 1 }
+        - name: size
+          in: query
+          schema: { type: integer, default: 20 }
       responses:
         '200':
           description: Danh sách khách hàng và điểm tích lũy
@@ -841,6 +909,21 @@ paths:
         '200':
           description: Hạn mức chi tiêu và % giảm giá của từng hạng thẻ
 
+    post:
+      tags: [08. CRM & Customers]
+      summary: Tạo chính sách hạng thành viên mới
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CustomerTierRequest'
+      responses:
+        '201':
+          description: Tạo chính sách hạng thành viên thành công
+        '400':
+          description: Dữ liệu không hợp lệ
+
   # =========================================================================
   # 09. PROMOTIONS & VOUCHERS
   # =========================================================================
@@ -848,6 +931,17 @@ paths:
     get:
       tags: [09. Promotions & Vouchers]
       summary: Danh sách mã giảm giá khuyến mãi
+      parameters:
+        - name: search
+          in: query
+          schema: { type: string }
+          description: Tìm theo mã voucher
+        - name: page
+          in: query
+          schema: { type: integer, default: 1 }
+        - name: size
+          in: query
+          schema: { type: integer, default: 20 }
       responses:
         '200':
           description: Danh sách voucher
@@ -897,6 +991,12 @@ paths:
         - name: storeId
           in: query
           schema: { type: integer }
+        - name: page
+          in: query
+          schema: { type: integer, default: 1 }
+        - name: size
+          in: query
+          schema: { type: integer, default: 20 }
       responses:
         '200':
           description: Danh sách phiếu đổi trả
@@ -1075,6 +1175,17 @@ components:
         commissionRate: { type: number, example: 1.0 }
         isActive: { type: boolean, default: true }
 
+    UserUpdateRequest:
+      type: object
+      properties:
+        storeId: { type: integer, example: 1 }
+        role: { type: string, enum: [ADMIN, STORE_MANAGER, CASHIER, ACCOUNTANT] }
+        password: { type: string, example: "newpassword123" }
+        fullName: { type: string, example: "Lê Thị Bình" }
+        phone: { type: string, example: "0903000333" }
+        commissionRate: { type: number, example: 1.5 }
+        isActive: { type: boolean, default: true }
+
     CategoryRequest:
       type: object
       required: [name, slug]
@@ -1217,6 +1328,14 @@ components:
         fullName: { type: string, example: "Nguyễn Thị Ngọc Anh" }
         birthday: { type: string, format: date, example: "1995-11-05" }
         tierId: { type: integer, example: 1 }
+
+    CustomerTierRequest:
+      type: object
+      required: [tierName, minSpent, discountPercent]
+      properties:
+        tierName: { type: string, example: "Kim Cương" }
+        minSpent: { type: number, example: 50000000 }
+        discountPercent: { type: number, example: 15.0 }
 
     VoucherRequest:
       type: object
