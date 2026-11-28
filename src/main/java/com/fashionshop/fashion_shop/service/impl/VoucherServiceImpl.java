@@ -58,6 +58,7 @@ public class VoucherServiceImpl implements VoucherService {
 
     @Override
     @Transactional
+    @CacheEvict(value = "vouchers", allEntries = true)
     public VoucherResponse createVoucher(VoucherRequest request) {
         String code = request.getCode().trim().toUpperCase();
         if (voucherRepository.existsByCode(code)) {
@@ -73,6 +74,7 @@ public class VoucherServiceImpl implements VoucherService {
     }
 
     @Override
+    @Cacheable(value = "vouchers", key = "'validate:' + #request.code.trim().toUpperCase() + ':' + #request.orderAmount", condition = "#result != null && Boolean.TRUE.equals(#result.isValid)")
     public VoucherValidationResponse validateVoucher(VoucherValidationRequest request) {
         String code = request.getCode().trim().toUpperCase();
         BigDecimal orderAmount = request.getOrderAmount();

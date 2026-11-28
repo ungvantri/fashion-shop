@@ -44,6 +44,15 @@ public class RedisConfig {
                 .withCacheConfiguration("brands", defaultConfig.entryTtl(Duration.ofDays(1)))
                 .withCacheConfiguration("categories", defaultConfig.entryTtl(Duration.ofDays(1)))
                 .withCacheConfiguration("stores", defaultConfig.entryTtl(Duration.ofDays(1)))
+                .withCacheConfiguration("customer_tiers", defaultConfig.entryTtl(Duration.ofDays(1)))
+                .withCacheConfiguration("customers", defaultConfig.entryTtl(Duration.ofHours(1)))
+                .withCacheConfiguration("users", defaultConfig.entryTtl(Duration.ofHours(2)))
+                .withCacheConfiguration("products", defaultConfig.entryTtl(Duration.ofHours(2)))
+                .withCacheConfiguration("vouchers", defaultConfig.entryTtl(Duration.ofMinutes(30)))
+                .withCacheConfiguration("orders", defaultConfig.entryTtl(Duration.ofHours(1)))
+                .withCacheConfiguration("stock_transfers", defaultConfig.entryTtl(Duration.ofMinutes(30)))
+                .withCacheConfiguration("reports", defaultConfig.entryTtl(Duration.ofMinutes(5)))
+                .withCacheConfiguration("inventories", defaultConfig.entryTtl(Duration.ofMinutes(5)))
                 .build();
     }
 }

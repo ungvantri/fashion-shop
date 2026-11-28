@@ -13,6 +13,9 @@ import com.fashionshop.fashion_shop.mapper.StockTransferMapper;
 import com.fashionshop.fashion_shop.repository.*;
 import com.fashionshop.fashion_shop.service.StockTransferService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.annotation.Caching;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -77,6 +80,7 @@ public class StockTransferServiceImpl implements StockTransferService {
     }
 
     @Override
+    @Cacheable(value = "stock_transfers", key = "'id:' + #id")
     public StockTransferResponse getStockTransferById(Long id) {
         StockTransfer stockTransfer = stockTransferRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy phiếu chuyển kho với ID: " + id));
@@ -85,6 +89,7 @@ public class StockTransferServiceImpl implements StockTransferService {
 
     @Override
     @Transactional
+    @CacheEvict(value = "inventories", allEntries = true)
     public StockTransferResponse createStockTransfer(StockTransferRequest request) {
         if (request.getFromStoreId().equals(request.getToStoreId())) {
             throw new ConflictException("Chi nhánh gửi và chi nhánh nhận không được trùng nhau");
@@ -166,6 +171,10 @@ public class StockTransferServiceImpl implements StockTransferService {
 
     @Override
     @Transactional
+    @Caching(evict = {
+            @CacheEvict(value = "stock_transfers", key = "'id:' + #id"),
+            @CacheEvict(value = "inventories", allEntries = true)
+    })
     public StockTransferResponse updateStatus(Long id, StockTransferStatusRequest request) {
         StockTransfer stockTransfer = stockTransferRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy phiếu chuyển kho với ID: " + id));

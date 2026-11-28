@@ -17,6 +17,9 @@ import com.fashionshop.fashion_shop.repository.*;
 import com.fashionshop.fashion_shop.service.OrderService;
 import com.fashionshop.fashion_shop.service.VoucherService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.annotation.Caching;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -81,6 +84,12 @@ public class OrderServiceImpl implements OrderService {
 
     @Override
     @Transactional
+    @Caching(evict = {
+            @CacheEvict(value = "inventories", allEntries = true),
+            @CacheEvict(value = "reports", allEntries = true),
+            @CacheEvict(value = "customers", allEntries = true),
+            @CacheEvict(value = "vouchers", allEntries = true)
+    })
     public OrderResponse createOrder(OrderCreateRequest request) {
         Store store = storeRepository.findById(request.getStoreId())
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy chi nhánh với ID: " + request.getStoreId()));
@@ -269,6 +278,7 @@ public class OrderServiceImpl implements OrderService {
     }
 
     @Override
+    @Cacheable(value = "orders", key = "'code:' + #orderCode")
     public OrderResponse getOrderByCode(String orderCode) {
         Order order = orderRepository.findByOrderCodeWithDetails(orderCode)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy đơn hàng với mã: " + orderCode));
@@ -284,6 +294,11 @@ public class OrderServiceImpl implements OrderService {
 
     @Override
     @Transactional
+    @Caching(evict = {
+            @CacheEvict(value = "orders", allEntries = true),
+            @CacheEvict(value = "reports", allEntries = true),
+            @CacheEvict(value = "inventories", allEntries = true)
+    })
     public ReturnOrderResponse createReturn(ReturnOrderRequest request) {
         Order originalOrder = orderRepository.findById(request.getOriginalOrderId())
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy đơn hàng gốc với ID: " + request.getOriginalOrderId()));

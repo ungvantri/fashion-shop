@@ -78,6 +78,7 @@ public class ProductServiceImpl implements ProductService {
 
     @Override
     @Transactional
+    @CacheEvict(value = "variants", allEntries = true)
     public ProductResponse createProduct(ProductRequest productRequest) {
         Product product = productMapper.toEntity(productRequest);
         Category category = categoryRepository.findById(productRequest.getCategoryId()).orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy danh mục có id: " + productRequest.getCategoryId()));

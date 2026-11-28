@@ -15,6 +15,8 @@ import com.fashionshop.fashion_shop.repository.StoreInventoryRepository;
 import com.fashionshop.fashion_shop.repository.StoreRepository;
 import com.fashionshop.fashion_shop.service.InventoryService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
@@ -93,6 +95,7 @@ public class InventoryServiceImpl implements InventoryService {
     }
 
     @Override
+    @Cacheable(value = "inventories", key = "'low-stock:' + (#storeId != null ? #storeId : 'all')")
     public List<StoreInventoryResponse> getLowStockInventories(Long storeId) {
         if (storeId != null) {
             boolean storeExists = storeRepository.existsById(storeId);
@@ -106,6 +109,7 @@ public class InventoryServiceImpl implements InventoryService {
 
     @Override
     @Transactional
+    @CacheEvict(value = "inventories", allEntries = true)
     public StoreInventoryResponse updateThreshold(StoreInventoryThresholdRequest request) {
         boolean storeExists = storeRepository.existsById(request.getStoreId());
         boolean variantExists = productVariantRepository.existsById(request.getProductVariantId());

@@ -12,6 +12,7 @@ import com.fashionshop.fashion_shop.repository.OrderRepository;
 import com.fashionshop.fashion_shop.repository.StoreInventoryRepository;
 import com.fashionshop.fashion_shop.service.ReportService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
@@ -36,6 +37,7 @@ public class ReportServiceImpl implements ReportService {
     private StoreInventoryRepository storeInventoryRepository;
 
     @Override
+    @Cacheable(value = "reports", key = "'dashboard'")
     public DashboardReportResponse getDashboardReport() {
         LocalDateTime startOfDay = LocalDate.now().atStartOfDay();
         LocalDateTime endOfDay = LocalDate.now().atTime(LocalTime.MAX);
@@ -57,6 +59,7 @@ public class ReportServiceImpl implements ReportService {
     }
 
     @Override
+    @Cacheable(value = "reports", key = "'revenue:' + #groupBy + ':' + #fromDate + ':' + #toDate")
     public List<RevenueReportItemResponse> getRevenueReport(String groupBy, LocalDate fromDate, LocalDate toDate) {
         LocalDateTime start = (fromDate != null) ? fromDate.atStartOfDay() : LocalDate.now().minusDays(30).atStartOfDay();
         LocalDateTime end = (toDate != null) ? toDate.atTime(LocalTime.MAX) : LocalDate.now().atTime(LocalTime.MAX);
@@ -91,6 +94,7 @@ public class ReportServiceImpl implements ReportService {
     }
 
     @Override
+    @Cacheable(value = "reports", key = "'best-sellers:' + #type + ':' + #limit")
     public List<BestSellerProductResponse> getBestSellers(String type, Integer limit) {
         int maxResults = (limit != null && limit > 0) ? limit : 10;
         Page<Order> ordersPage = orderRepository.findOrders(null, null, OrderStatus.COMPLETED, null, null, PageRequest.of(0, 1000));
